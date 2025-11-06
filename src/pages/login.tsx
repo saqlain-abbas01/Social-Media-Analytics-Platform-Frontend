@@ -26,6 +26,9 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BarChart3, AlertCircle } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { login } from "@/api/userService";
+import type { ApiError } from "@/types";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -36,7 +39,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const setUserFromApi = useAuthStore((s) => s.setUserFromApi);
+  const { setAuth } = useAuthStore();
 
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -48,34 +51,23 @@ export function LoginPage() {
     },
   });
 
+  const mutation = useMutation({
+    mutationFn: login,
+    mutationKey: ["register"],
+    onSuccess: (data) => {
+      console.log("registered data", data);
+      setAuth(data.user, data.accessToken);
+      toast.success("User registration is sucessfull");
+      navigate("/");
+    },
+    onError: (err: ApiError) => {
+      toast.error(err.response?.data.message || "Error while registering user");
+    },
+  });
+
   const onSubmit = async (data: LoginFormData) => {
     setAuthError(null);
-
-    try {
-      // TODO: Replace this with real API call
-      // const res = await axios.post("/api/login", data)
-      // setUserFromApi(res.data.user)
-
-      if (data.email !== "demo@example.com" || data.password !== "demo123") {
-        throw new Error("Invalid credentials");
-      }
-
-      // Fake logged-in user
-      setUserFromApi({
-        _id: "12345",
-        email: data.email,
-        name: "Demo User",
-        role: "admin",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-
-      navigate("/");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      setAuthError("Invalid email or password");
-      toast.error(err.message || "Error while logging in");
-    }
+    mutation.mutate(data);
   };
 
   return (

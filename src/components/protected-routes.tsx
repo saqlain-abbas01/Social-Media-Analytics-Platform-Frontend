@@ -1,3 +1,4 @@
+// src/components/ProtectedRoute.tsx
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useEffect, useState } from "react";
@@ -11,11 +12,20 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    initialize();
-    setLoaded(true);
+    (async () => {
+      await initialize();
+      setLoaded(true);
+    })();
   }, []);
 
-  if (!loaded) return null; // or a loader
+  console.log("isAuthenticated", isAuthenticated);
+
+  if (!loaded)
+    return (
+      <div className="w-full h-screen flex justify-center items-center">
+        Loading...
+      </div>
+    ); // You can use a spinner
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

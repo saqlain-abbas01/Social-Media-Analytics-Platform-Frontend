@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
 import { useAuthStore } from "@/store/useAuthStore";
-
 import {
   Form,
   FormField,
@@ -17,6 +16,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox"; // ✅ Import checkbox
 import {
   Card,
   CardContent,
@@ -27,24 +27,29 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BarChart3, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
+import { useMutation } from "@tanstack/react-query";
+import { registerUser } from "@/api/userService";
+import type { ApiError } from "@/types";
 
+// ✅ Extend schema to include role checkbox
 const registerSchema = z
   .object({
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Invalid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
+    isAdmin: z.boolean().catch(false),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });
 
-type RegisterFormData = z.infer<typeof registerSchema>;
+export type RegisterFormData = z.infer<typeof registerSchema>;
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const setUserFromApi = useAuthStore((s) => s.setUserFromApi);
+  const { setAuth } = useAuthStore();
 
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -55,33 +60,28 @@ export function RegisterPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      isAdmin: false,
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: registerUser,
+    mutationKey: ["register"],
+    onSuccess: (data) => {
+      console.log("registered data", data);
+      setAuth(data.user, data.accessToken);
+      toast.success("User registration is sucessfull");
+      navigate("/");
+    },
+    onError: (err: ApiError) => {
+      toast.error(err.response?.data.message || "Error while registering user");
     },
   });
 
   const onSubmit = async (data: RegisterFormData) => {
     setAuthError(null);
-
-    try {
-      // TODO: replace with real API request
-      // const res = await axios.post("/api/register", data)
-      // setUserFromApi(res.data.user)
-
-      // Fake API response for now
-      setUserFromApi({
-        _id: "user123",
-        email: data.email,
-        name: data.name,
-        role: "user",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-
-      navigate("/");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      setAuthError("Registration failed. Please try again.");
-      toast.error(err.message || "Error while logging in");
-    }
+    console.log("submitted data", data);
+    mutation.mutate(data);
   };
 
   return (
@@ -175,6 +175,27 @@ export function RegisterPage() {
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* ✅ Checkbox for Admin Signup */}
+              <FormField
+                control={form.control}
+                name="isAdmin"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-2">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(checked) =>
+                          field.onChange(checked === true)
+                        }
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-medium leading-none">
+                      Sign up as Admin
+                    </FormLabel>
                   </FormItem>
                 )}
               />

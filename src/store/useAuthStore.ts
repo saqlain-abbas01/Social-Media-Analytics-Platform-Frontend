@@ -1,48 +1,42 @@
-// store/authStore.ts
-import { create } from "zustand";
+// src/store/useAuthStore.ts
+import api from "@/api/api";
 import type { AuthUser } from "@/types/user";
+import { create } from "zustand";
 
 interface AuthState {
   user: AuthUser | null;
+  accessToken: string | null;
   isAuthenticated: boolean;
-  initialize: () => void;
-  setUserFromApi: (user: AuthUser) => void;
-  logout: () => void;
+  setAuth: (user: AuthUser, accessToken: string) => void;
+  clearAuth: () => void;
+  initialize: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
+  accessToken: null,
   isAuthenticated: false,
-
-  initialize: () => {
-    const stored = localStorage.getItem("auth_user");
-    if (!stored) return;
-
+  setAuth: (user, accessToken) =>
+    set({ user, accessToken, isAuthenticated: true }),
+  clearAuth: () =>
+    set({ user: null, accessToken: null, isAuthenticated: false }),
+  initialize: async () => {
     try {
-      const parsed: AuthUser = JSON.parse(stored);
+      const { data } = await api.post(
+        "/auth/refresh",
+        {},
+        { withCredentials: true }
+      );
+      console.log("refresh data", data);
+
       set({
-        user: parsed,
+        user: data.user,
+        accessToken: data.accessToken,
         isAuthenticated: true,
       });
-    } catch {
-      localStorage.removeItem("auth_user");
+    } catch (err) {
+      console.log(err);
+      get().clearAuth();
     }
-  },
-
-  setUserFromApi: (user) => {
-    localStorage.setItem("auth_user", JSON.stringify(user));
-
-    set({
-      user,
-      isAuthenticated: true,
-    });
-  },
-
-  logout: () => {
-    localStorage.removeItem("auth_user");
-    set({
-      user: null,
-      isAuthenticated: false,
-    });
   },
 }));
