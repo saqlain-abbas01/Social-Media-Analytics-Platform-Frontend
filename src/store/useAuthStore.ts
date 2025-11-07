@@ -28,12 +28,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         { withCredentials: true }
       );
       console.log("refresh data", data);
-
-      set({
-        user: data.user,
-        accessToken: data.accessToken,
-        isAuthenticated: true,
-      });
+      if (data.user && data.accessToken) {
+        set({
+          user: data.user,
+          accessToken: data.accessToken,
+          isAuthenticated: true,
+        });
+      }
     } catch (err) {
       console.log(err);
       get().clearAuth();

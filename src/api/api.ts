@@ -10,25 +10,26 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to attach access token
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
+  console.log("token from store", token);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Response interceptor to handle token refresh automatically
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    console.log("expiry token error", error.response.data, originalRequest);
+    if (error.response?.status === 403 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
         const { data } = await api.post("/auth/refresh");
-        useAuthStore
-          .getState()
-          .setAuth(useAuthStore.getState().user!, data.accessToken);
+        console.log("response data", data);
+        if (data.user && data.accessToken) {
+          useAuthStore.getState().setAuth(data.user, data.accessToken);
+        }
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(originalRequest);
       } catch {

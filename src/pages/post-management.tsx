@@ -1,15 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -19,68 +12,61 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CreatePostForm } from "@/components/forms/create-post-form";
-import { Search, Plus, MoreVertical, Trash2, Edit } from "lucide-react";
-
-const mockPosts = [
-  {
-    id: 1,
-    content: "Excited to announce our new feature!",
-    platform: "twitter",
-    status: "published",
-    publishedAt: "2025-01-15",
-    engagement: 1243,
-    reach: 8900,
-  },
-  {
-    id: 2,
-    content: "Check out our latest blog post...",
-    platform: "linkedin",
-    status: "scheduled",
-    publishedAt: "2025-01-20",
-    engagement: 0,
-    reach: 0,
-  },
-  {
-    id: 3,
-    content: "Behind the scenes photo from our team event",
-    platform: "instagram",
-    status: "draft",
-    publishedAt: null,
-    engagement: 0,
-    reach: 0,
-  },
-  {
-    id: 4,
-    content: "Join us for webinar on digital marketing",
-    platform: "facebook",
-    status: "published",
-    publishedAt: "2025-01-10",
-    engagement: 523,
-    reach: 4200,
-  },
-];
-
-const statusColors: Record<string, string> = {
-  published: "bg-green-100 text-green-800",
-  scheduled: "bg-blue-100 text-blue-800",
-  draft: "bg-gray-100 text-gray-800",
-  failed: "bg-red-100 text-red-800",
-};
+import { Search, Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getPosts } from "@/api/postService";
+import PostCard from "@/components/posts-cards";
+import type { Post, PostStatus } from "@/types/post";
+import { usePostsStore } from "@/store/usePostStore";
 
 export function PostsManagementPage() {
+  // --- Filters & Pagination ---
   const [searchQuery, setSearchQuery] = useState("");
+  const [platformFilter, setPlatformFilter] = useState("");
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [statusFilter, setStatusFilter] = useState<PostStatus | "all">("all");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [posts, setPosts] = useState(mockPosts);
 
-  const filteredPosts = posts.filter(
-    (post) =>
-      post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.platform.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const { setPosts, posts } = usePostsStore();
 
-  const handleDeletePost = (id: number) => {
-    setPosts(posts.filter((p) => p.id !== id));
-  };
+  const platforms = ["twitter", "facebook", "instagram", "linkedin"];
+
+  // --- Fetch posts from backend ---
+  const { data, isLoading } = useQuery({
+    queryKey: [
+      "get-posts",
+      page,
+      limit,
+      searchQuery,
+      platformFilter,
+      statusFilter,
+      startDate,
+      endDate,
+    ],
+    queryFn: () =>
+      getPosts({
+        page,
+        limit,
+        search: searchQuery || undefined,
+        platform: platformFilter || undefined,
+        status: statusFilter,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      }),
+  });
+
+  // Extract posts and total from backend response
+  useEffect(() => {
+    setPosts(data?.data as Post[]);
+  }, [data]);
+
+  // const totalPosts = data?.total || 0;
+  const totalPages = data?.totalPages || 1;
+
+  console.log("posts", posts);
 
   return (
     <div className="min-h-screen bg-background">
@@ -114,8 +100,9 @@ export function PostsManagementPage() {
           </Dialog>
         </div>
 
-        {/* Search and Filters */}
-        <div className="mb-6 flex gap-4">
+        {/* Search & Filters */}
+        <div className="mb-6 flex gap-4 flex-wrap items-end">
+          {/* Search */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
             <Input
@@ -125,32 +112,83 @@ export function PostsManagementPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Limit</label>
+            <Input
+              placeholder="enter post limi"
+              className="pl-10"
+              value={limit}
+              onChange={(e) => setLimit(Number(e.target.value))}
+            />
+          </div>
+
+          {/* Platform Filter */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Platform</label>
+            <select
+              className="border rounded px-3 py-1"
+              value={platformFilter}
+              onChange={(e) => setPlatformFilter(e.target.value)}
+            >
+              <option value="">All Platforms</option>
+              {platforms.map((p) => (
+                <option key={p} value={p}>
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date Range */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Start Date</label>
+            <input
+              type="date"
+              className="border rounded px-3 py-1"
+              value={startDate ? startDate.toISOString().split("T")[0] : ""}
+              onChange={(e) =>
+                setStartDate(e.target.value ? new Date(e.target.value) : null)
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">End Date</label>
+            <input
+              type="date"
+              className="border rounded px-3 py-1"
+              value={endDate ? endDate.toISOString().split("T")[0] : ""}
+              onChange={(e) =>
+                setEndDate(e.target.value ? new Date(e.target.value) : null)
+              }
+            />
+          </div>
         </div>
 
-        {/* Tabs for Status Filter */}
+        {/* Status Tabs */}
         <Tabs defaultValue="all" className="mb-6">
           <TabsList>
-            <TabsTrigger value="all">All Posts ({posts.length})</TabsTrigger>
-            <TabsTrigger value="published">
-              Published ({posts.filter((p) => p.status === "published").length})
-            </TabsTrigger>
-            <TabsTrigger value="scheduled">
-              Scheduled ({posts.filter((p) => p.status === "scheduled").length})
-            </TabsTrigger>
-            <TabsTrigger value="draft">
-              Drafts ({posts.filter((p) => p.status === "draft").length})
-            </TabsTrigger>
+            {["all", "published", "scheduled", "draft"].map((status) => (
+              <TabsTrigger
+                key={status}
+                value={status}
+                onClick={() => {
+                  setStatusFilter(status as PostStatus);
+                  setPage(1); // reset page on filter change
+                }}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          <TabsContent value="all" className="mt-6 space-y-4">
-            {filteredPosts.length > 0 ? (
-              filteredPosts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onDelete={handleDeletePost}
-                />
-              ))
+          <TabsContent value={statusFilter} className="mt-6 space-y-4">
+            {isLoading ? (
+              <div className="w-full min-h-62 flex  justify-center items-center">
+                Loading posts...
+              </div>
+            ) : posts?.length > 0 ? (
+              posts?.map((post) => <PostCard key={post._id} post={post} />)
             ) : (
               <Card>
                 <CardContent className="pt-6 text-center">
@@ -160,65 +198,23 @@ export function PostsManagementPage() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Pagination */}
+        <div className="flex justify-between mt-4">
+          <Button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+            Previous
+          </Button>
+          <span>
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
       </main>
     </div>
-  );
-}
-
-function PostCard({
-  post,
-  onDelete,
-}: {
-  post: (typeof mockPosts)[0];
-  onDelete: (id: number) => void;
-}) {
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="secondary" className="capitalize">
-                {post.platform}
-              </Badge>
-              <Badge className={statusColors[post.status]}>{post.status}</Badge>
-            </div>
-            <p className="text-foreground font-medium mb-2">{post.content}</p>
-            {post.status === "published" && (
-              <div className="flex gap-6 text-sm text-muted-foreground">
-                <span>Published: {post.publishedAt}</span>
-                <span>{post.engagement.toLocaleString()} engagement</span>
-                <span>{post.reach.toLocaleString()} reach</span>
-              </div>
-            )}
-            {post.status === "scheduled" && (
-              <p className="text-sm text-muted-foreground">
-                Scheduled for: {post.publishedAt}
-              </p>
-            )}
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDelete(post.id)}
-                className="text-destructive"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

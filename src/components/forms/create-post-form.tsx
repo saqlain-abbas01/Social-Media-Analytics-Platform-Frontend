@@ -13,43 +13,114 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ApiError } from "@/types";
+import { createPost, updatePost } from "@/api/postService";
+import type { Post } from "@/types/post";
+import { useEffect } from "react";
 
 const createPostSchema = z.object({
   content: z
     .string()
     .min(1, "Content is required")
     .max(1000, "Content must be less than 1000 characters"),
-  platforms: z.array(z.string()).min(1, "Select at least one platform"),
-  hashtags: z.string().optional(),
+  platform: z
+    .enum(["twitter", "facebook", "instagram", "linkedin"])
+    .refine((value) => !!value, {
+      message: "Please select a platform",
+    }),
+  scheduledAt: z.string().optional(),
 });
 
-type CreatePostFormData = z.infer<typeof createPostSchema>;
+export type CreatePostFormData = z.infer<typeof createPostSchema>;
 
-export function CreatePostForm({ onSuccess }: { onSuccess: () => void }) {
+export function CreatePostForm({
+  onSuccess,
+  editingPost,
+}: {
+  onSuccess: () => void;
+  editingPost?: Post;
+}) {
+  console.log("editingPost", editingPost);
   const form = useForm<CreatePostFormData>({
     resolver: zodResolver(createPostSchema),
     defaultValues: {
       content: "",
-      platforms: [],
-      hashtags: "",
+      platform: "facebook",
+      scheduledAt: "",
     },
   });
 
-  const platforms = ["Twitter", "Facebook", "Instagram", "LinkedIn"];
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (editingPost) {
+      const scheduledAt = editingPost.scheduledAt
+        ? new Date(editingPost.scheduledAt).toISOString().slice(0, 16)
+        : "";
+
+      form.reset({
+        content: editingPost.content,
+        platform: editingPost.platform,
+        scheduledAt,
+      });
+    }
+  }, [editingPost]);
+
+  const platforms = ["twitter", "facebook", "instagram", "linkedin"];
+
+  const createMutation = useMutation({
+    mutationFn: createPost,
+    mutationKey: ["create-post"],
+    onSuccess: () => {
+      toast.success("Post created sucessfully");
+      queryClient.invalidateQueries({ queryKey: ["get-posts"] });
+      onSuccess();
+    },
+    onError: (err: ApiError) => {
+      toast.error(err.response?.data.message || "Error creating post");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: updatePost,
+    mutationKey: ["update-post"],
+    onSuccess: () => {
+      toast.success("Post updated sucessfully");
+      queryClient.invalidateQueries({ queryKey: ["get-posts"] });
+      onSuccess();
+    },
+    onError: (err: ApiError) => {
+      toast.error(err.response?.data.message || "Error updating post");
+    },
+  });
 
   const onSubmit = async (data: CreatePostFormData) => {
-    try {
-      console.log("POST DATA", data);
+    if (editingPost) {
+      let postStatus = "draft";
+      if (data.scheduledAt) {
+        postStatus = "scheduled";
+      }
+      const payload = {
+        ...data,
+        status: postStatus,
+        id: editingPost._id,
+      };
+      updateMutation.mutate(payload);
 
-      toast.success("Post created successfully");
-      onSuccess();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      console.log(err);
-
-      toast.error("Failed to create post");
+      return;
+    } else {
+      let postStatus = "draft";
+      if (data.scheduledAt) {
+        postStatus = "scheduled";
+      }
+      const payload = {
+        ...data,
+        status: postStatus,
+      };
+      console.log("creat post data", payload);
+      createMutation.mutate(payload);
     }
   };
 
@@ -81,58 +152,48 @@ export function CreatePostForm({ onSuccess }: { onSuccess: () => void }) {
         {/* PLATFORMS */}
         <FormField
           control={form.control}
-          name="platforms"
-          render={() => (
+          name="platform"
+          render={({ field }) => (
             <FormItem>
-              <FormLabel>Platforms</FormLabel>
+              <FormLabel>Platform</FormLabel>
               <div className="space-y-2">
-                {platforms.map((platform) => {
-                  const selected = form.watch("platforms");
-
-                  return (
-                    <FormItem
-                      key={platform}
-                      className="flex items-center space-x-2"
-                    >
-                      <FormControl>
-                        <Checkbox
-                          checked={selected.includes(platform)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              form.setValue("platforms", [
-                                ...selected,
-                                platform,
-                              ]);
-                            } else {
-                              form.setValue(
-                                "platforms",
-                                selected.filter((p) => p !== platform)
-                              );
-                            }
-                          }}
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal cursor-pointer">
-                        {platform}
-                      </FormLabel>
-                    </FormItem>
-                  );
-                })}
+                {platforms.map((platform) => (
+                  <FormItem
+                    key={platform}
+                    className="flex items-center space-x-2"
+                  >
+                    <FormControl>
+                      <input
+                        type="radio"
+                        value={platform}
+                        checked={field.value === platform}
+                        onChange={() => field.onChange(platform)}
+                        className="cursor-pointer"
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">
+                      {platform}
+                    </FormLabel>
+                  </FormItem>
+                ))}
               </div>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        {/* HASHTAGS */}
         <FormField
           control={form.control}
-          name="hashtags"
+          name="scheduledAt"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Hashtags (Optional)</FormLabel>
+              <FormLabel>Schedule Post (Optional)</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="#marketing #socialmedia" />
+                <Input
+                  {...field}
+                  type="datetime-local"
+                  placeholder="Select date and time"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -143,7 +204,12 @@ export function CreatePostForm({ onSuccess }: { onSuccess: () => void }) {
           <Button type="button" variant="outline" onClick={onSuccess}>
             Cancel
           </Button>
-          <Button type="submit">Create Post</Button>
+          <Button
+            type="submit"
+            disabled={createMutation.isPending || updateMutation.isPending}
+          >
+            {editingPost ? "Update Post" : "Create Post"}
+          </Button>
         </div>
       </form>
     </Form>

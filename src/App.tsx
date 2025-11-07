@@ -6,6 +6,7 @@ import { RegisterPage } from "@/pages/register";
 import { useAuthStore } from "./store/useAuthStore";
 import { ProtectedRoute } from "@/components/protected-routes";
 import { ProtectedLayout } from "./components/shared/protected-layout";
+import PostAnalyticsPage from "./pages/post-analytics";
 
 const DashboardPage = lazy(() =>
   import("@/pages/dashboard").then((m) => ({ default: m.DashboardPage }))
@@ -58,6 +59,7 @@ export default function App() {
           >
             <Route index element={<DashboardPage />} />
             <Route path="posts" element={<PostsManagementPage />} />
+            <Route path="/posts/:id" element={<PostAnalyticsPage />} />
             <Route path="analytics" element={<AnalyticsInsightsPage />} />
             <Route path="schedule" element={<PostSchedulingPage />} />
           </Route>

@@ -22,6 +22,14 @@ export interface Post {
   updatedAt: string; // ISO
 }
 
+export interface FilteredPostsResponse {
+  data: Post[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface EngagementMetrics {
   likes: number;
   comments: number;
@@ -43,4 +51,15 @@ export interface PostEngagement {
   dayOfWeek: number;
 
   createdAt: string;
+}
+
+export interface PostAnalytics {
+  source: "live" | "cache" | "calculated"; // can be extended if needed
+  data: {
+    totalEngagement: number;
+    engagementRate: number;
+    clickThroughRate: number;
+    averageEngagementPerHour: number;
+    performanceScore: number;
+  };
 }
