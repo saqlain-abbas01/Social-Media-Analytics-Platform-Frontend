@@ -16,7 +16,6 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox"; // ✅ Import checkbox
 import {
   Card,
   CardContent,
@@ -180,7 +179,7 @@ export function RegisterPage() {
               />
 
               {/* ✅ Checkbox for Admin Signup */}
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="isAdmin"
                 render={({ field }) => (
@@ -198,7 +197,7 @@ export function RegisterPage() {
                     </FormLabel>
                   </FormItem>
                 )}
-              />
+              /> */}
 
               <Button type="submit" className="w-full">
                 Sign Up
