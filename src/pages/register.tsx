@@ -70,7 +70,7 @@ export function RegisterPage() {
       console.log("registered data", data);
       setAuth(data.user, data.accessToken);
       toast.success("User registration is sucessfull");
-      navigate("/");
+      navigate("/login");
     },
     onError: (err: ApiError) => {
       toast.error(err.response?.data.message || "Error while registering user");
