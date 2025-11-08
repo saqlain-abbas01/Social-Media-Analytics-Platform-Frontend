@@ -1,73 +1,67 @@
-# React + TypeScript + Vite
+# Social Media Analytics Platform - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the **frontend service** for the Social Media Analytics Platform.  
+It is built with **React**, **TypeScript**, **Vite**, and **Tailwind CSS**, providing the user interface for authentication, post management, analytics, and scheduling.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Table of Contents
 
-## React Compiler
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [Scripts](#scripts)
+- [Folder Structure](#folder-structure)
+- [Deployment Notes](#deployment-notes)
+- [License](#license)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- User authentication with JWT (access token in store, refresh token in cookies)
+- Protected routes with role-based access
+- Post management (view, schedule, analytics)
+- Analytics dashboards and insights
+- Lazy loading for improved performance
+- Input validation
+- Error boundaries and fallback UIs for better UX
+- Responsive design using Tailwind CSS
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Tech Stack
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **React.js** - Frontend library
+- **TypeScript** - Type-safe JavaScript
+- **Vite** - Fast build tool
+- **React Router DOM** - Routing
+- **Axios** - API calls
+- **Tailwind CSS** - Styling
+- **Zustand** - State management for auth
+- **React.lazy + Suspense** - Code splitting & lazy loading
+- **ErrorBoundary** - Error handling for components
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Prerequisites
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- Node.js >= 20
+- npm >= 9
+- Backend API running (local or deployed)
+
+---
+
+## Getting Started
+
+Follow these steps to run the frontend locally:
+
+### 1. Clone the repository
+
+```bash
+git clone <https://github.com/saqlain-abbas01/Social-Media-Analytics-Platform-Frontend.git>
+cd frontend
+npm i
+npm run dev
