@@ -129,7 +129,11 @@ export function LoginPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={mutation.isPending}
+              >
                 Sign In
               </Button>
             </form>

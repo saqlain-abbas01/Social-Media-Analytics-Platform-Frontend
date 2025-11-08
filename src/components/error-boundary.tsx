@@ -46,6 +46,7 @@ export default class ErrorBoundary extends React.Component<
       hasError: false,
       error: null,
     });
+    window.location.reload();
   };
 
   render() {
@@ -73,7 +74,10 @@ export default class ErrorBoundary extends React.Component<
                 {this.state.error?.message}
               </p>
 
-              <Button onClick={this.handleReset} className="w-full text-black">
+              <Button
+                onClick={this.handleReset}
+                className="w-full text-primary"
+              >
                 Try Again
               </Button>
             </CardContent>
