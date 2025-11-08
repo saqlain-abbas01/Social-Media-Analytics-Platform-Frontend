@@ -27,3 +27,13 @@ export const login = async (data: { email: string; password: string }) => {
     throw err;
   }
 };
+
+export const LogOut = async () => {
+  try {
+    const response = await api.post("/auth/logout");
+    return response.data;
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+};

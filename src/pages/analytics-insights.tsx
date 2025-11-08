@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -18,122 +18,73 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ScatterChart,
-  Scatter,
 } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { getPerformanceComparison } from "@/api/analyticsTrends";
+import type { PerformanceComparisonResponse } from "@/types/analytics";
 
-// ✅ Temporary Mock Data for Analytics
-const mockPosts = [
-  {
-    _id: "1",
-    userId: "u1",
-    content: "Mock post 1",
-    platform: "twitter",
-    scheduledAt: null,
-    publishedAt: new Date(),
-    status: "published",
-    metadata: { hashtags: ["#test"], wordCount: 3 },
-    engagement: 120,
-    reach: 500,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    _id: "2",
-    userId: "u1",
-    content: "Mock post 2",
-    platform: "facebook",
-    scheduledAt: null,
-    publishedAt: new Date(),
-    status: "published",
-    metadata: { hashtags: ["#hello"], wordCount: 5 },
-    engagement: 80,
-    reach: 300,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    _id: "3",
-    userId: "u1",
-    content: "Mock post 3",
-    platform: "instagram",
-    scheduledAt: null,
-    publishedAt: null,
-    status: "draft",
-    metadata: { hashtags: ["#draft"], wordCount: 2 },
-    engagement: 0,
-    reach: 0,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    _id: "4",
-    userId: "u1",
-    content: "Mock post 4",
-    platform: "linkedin",
-    scheduledAt: null,
-    publishedAt: new Date(),
-    status: "published",
-    metadata: { hashtags: ["#biz"], wordCount: 4 },
-    engagement: 60,
-    reach: 200,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+const PLATFORMS = ["all", "twitter", "facebook", "instagram", "linkedin"];
 
 export function AnalyticsInsightsPage() {
-  const posts = mockPosts;
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [platform, setPlatform] = useState<string>("all");
 
-  const engagementByPlatform = useMemo(() => {
-    const platforms = posts.reduce((acc, post) => {
-      const existing = acc.find((p) => p.platform === post.platform);
-      if (existing) {
-        existing.engagement += post.engagement || 0;
-        existing.reach += post.reach || 0;
-        existing.posts += 1;
-      } else {
-        acc.push({
-          platform: post.platform,
-          engagement: post.engagement || 0,
-          reach: post.reach || 0,
-          posts: 1,
-        });
-      }
-      return acc;
-    }, [] as Array<{ platform: string; engagement: number; reach: number; posts: number }>);
-    return platforms;
-  }, [posts]);
+  const { data, isLoading } = useQuery<PerformanceComparisonResponse>({
+    queryFn: () => getPerformanceComparison(startDate, endDate, platform),
+    queryKey: ["performance-comparison", startDate, endDate, platform],
+  });
 
-  const performanceData = useMemo(() => {
-    return posts
-      .filter((p) => p.status === "published")
-      .map((p) => ({
-        id: p._id,
-        engagement: p.engagement,
-        reach: p.reach,
-        platform: p.platform,
-      }));
-  }, [posts]);
+  console.log("comparison data", data);
 
-  const contentTypeData = useMemo(() => {
-    const types = posts.reduce((acc, post) => {
-      const type = post.status;
-      const existing = acc.find((t) => t.type === type);
-      if (existing) {
-        existing.count += 1;
-        existing.engagement += post.engagement || 0;
-      } else {
-        acc.push({
-          type,
-          count: 1,
-          engagement: post.engagement || 0,
-        });
-      }
-      return acc;
-    }, [] as Array<{ type: string; count: number; engagement: number }>);
-    return types;
-  }, [posts]);
+  const metricsData = useMemo(() => {
+    if (!data?.data) return [];
+    const d = data.data;
+    return [
+      {
+        metric: "Posts",
+        current: d.totalPosts.current,
+        previous: d.totalPosts.previous,
+        change: d.totalPosts.change,
+      },
+      {
+        metric: "Impressions",
+        current: d.totalImpressions.current,
+        previous: d.totalImpressions.previous,
+        change: d.totalImpressions.change,
+      },
+      {
+        metric: "Likes",
+        current: d.totalLikes.current,
+        previous: d.totalLikes.previous,
+        change: d.totalLikes.change,
+      },
+      {
+        metric: "Comments",
+        current: d.totalComments.current,
+        previous: d.totalComments.previous,
+        change: d.totalComments.change,
+      },
+      {
+        metric: "Shares",
+        current: d.totalShares.current,
+        previous: d.totalShares.previous,
+        change: d.totalShares.change,
+      },
+      {
+        metric: "Engagements",
+        current: d.totalEngagement.current,
+        previous: d.totalEngagement.previous,
+        change: d.totalEngagement.change,
+      },
+      {
+        metric: "Engagement Rate",
+        current: d.engagementRate.current,
+        previous: d.engagementRate.previous,
+        change: d.engagementRate.change,
+      },
+    ];
+  }, [data]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -147,93 +98,131 @@ export function AnalyticsInsightsPage() {
           </p>
         </div>
 
-        <Tabs defaultValue="platform" className="w-full">
+        {/* Filters */}
+        <div className="flex gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium mb-1">Start Date</label>
+            <input
+              type="date"
+              className="border rounded px-3 py-1"
+              value={startDate ? startDate.toISOString().split("T")[0] : ""}
+              onChange={(e) =>
+                setStartDate(e.target.value ? new Date(e.target.value) : null)
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">End Date</label>
+            <input
+              type="date"
+              className="border rounded px-3 py-1"
+              value={endDate ? endDate.toISOString().split("T")[0] : ""}
+              onChange={(e) =>
+                setEndDate(e.target.value ? new Date(e.target.value) : null)
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Platform</label>
+            <select
+              className="border rounded px-3 py-1"
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value)}
+            >
+              {PLATFORMS.map((p) => (
+                <option key={p} value={p}>
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <Tabs defaultValue="bar" className="w-full">
           <TabsList>
-            <TabsTrigger value="platform">Platform Performance</TabsTrigger>
-            <TabsTrigger value="content">Content Performance</TabsTrigger>
-            <TabsTrigger value="scatter">Reach vs Engagement</TabsTrigger>
+            <TabsTrigger value="bar">Overview</TabsTrigger>
+            <TabsTrigger value="line">Monthly Comparison</TabsTrigger>
           </TabsList>
 
-          {/* Platform Chart */}
-          <TabsContent value="platform" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Performance by Platform</CardTitle>
-                <CardDescription>
-                  Engagement and reach metrics across platforms
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={engagementByPlatform}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="platform" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="engagement" fill="#8884d8" />
-                    <Bar dataKey="reach" fill="#82ca9d" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {isLoading ? (
+            <div className="w-full min-h-62 flex justify-center items-center">
+              Loading...
+            </div>
+          ) : (
+            <>
+              <TabsContent value="bar" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Performance Overview</CardTitle>
+                    <CardDescription>
+                      Current period vs previous period metrics
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={420}>
+                      <BarChart data={metricsData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="metric" />
+                        <YAxis />
+                        <Tooltip
+                          formatter={(value: number) =>
+                            Number(value).toLocaleString()
+                          }
+                        />
+                        <Legend />
+                        <Bar
+                          dataKey="current"
+                          name="Current Period"
+                          fill="#8884d8"
+                        />
+                        <Bar
+                          dataKey="previous"
+                          name="Previous Period"
+                          fill="#82ca9d"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          {/* Content Chart */}
-          <TabsContent value="content" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Performance by Content Status</CardTitle>
-                <CardDescription>
-                  Engagement metrics by post status
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={contentTypeData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="type" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="engagement"
-                      stroke="#8884d8"
-                    />
-                    <Line type="monotone" dataKey="count" stroke="#82ca9d" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Scatter */}
-          <TabsContent value="scatter" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Reach vs Engagement Analysis</CardTitle>
-                <CardDescription>
-                  Correlation of published posts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <ScatterChart>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="reach" />
-                    <YAxis dataKey="engagement" />
-                    <Tooltip />
-                    <Scatter
-                      name="Posts"
-                      data={performanceData}
-                      fill="#8884d8"
-                    />
-                  </ScatterChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              <TabsContent value="line" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Performance Change (%)</CardTitle>
+                    <CardDescription>
+                      Percentage change from last period
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <LineChart data={metricsData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="metric" />
+                        <YAxis
+                          tickFormatter={(val) => `${val.toFixed(0)}%`}
+                          domain={["auto", "auto"]}
+                        />
+                        <Tooltip
+                          formatter={(value: number) =>
+                            `${value.toFixed(2)}% change`
+                          }
+                        />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="change"
+                          name="Change (%)"
+                          stroke="#ff7300"
+                          strokeWidth={2}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </main>
     </div>

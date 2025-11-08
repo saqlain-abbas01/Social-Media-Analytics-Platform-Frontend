@@ -1,37 +1,40 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import {
-  BarChart3,
-  FileText,
-  TrendingUp,
-  Clock,
-  Settings,
-  Menu,
-  Home,
-} from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Menu, Home } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { LogOut } from "@/api/userService";
+import toast from "react-hot-toast";
 
 export function NavigationHeader() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
+  const mutation = useMutation({
+    mutationFn: LogOut,
+    mutationKey: ["logout"],
+    onSuccess: () => {
+      toast.success("Logout sucessfully");
+      navigate("/login");
+    },
+    onError: () => {
+      toast.error("Error while logging out");
+    },
+  });
+
   const navItems = [
     { label: "Dashboard", href: "/", icon: Home },
     { label: "Posts", href: "/posts", icon: FileText },
     { label: "Analytics", href: "/analytics", icon: TrendingUp },
-    { label: "Schedule", href: "/schedule", icon: Clock },
-    { label: "Settings", href: "/settings", icon: Settings },
   ];
 
   const isActive = (href: string) => pathname === href;
+
+  const handleLogout = () => {
+    mutation.mutate();
+  };
 
   return (
     <header className="border-b border-border bg-background sticky top-0 z-40">
@@ -95,22 +98,11 @@ export function NavigationHeader() {
           </SheetContent>
         </Sheet>
 
-        {/* User Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="ml-2">
-              Profile
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link to="/settings">Settings</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/")}>
-              Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div>
+          <Button variant="ghost" className="ml-2" onClick={handleLogout}>
+            Logout
+          </Button>
+        </div>
       </div>
     </header>
   );

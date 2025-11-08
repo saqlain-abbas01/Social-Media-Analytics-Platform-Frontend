@@ -4,7 +4,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
-  withCredentials: true, // important for refresh token cookie
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -22,7 +22,7 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     console.log("expiry token error", error.response.data, originalRequest);
-    if (error.response?.status === 403 && !originalRequest._retry) {
+    if (!originalRequest._retry) {
       originalRequest._retry = true;
       try {
         const { data } = await api.post("/auth/refresh");
@@ -32,7 +32,8 @@ api.interceptors.response.use(
         }
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(originalRequest);
-      } catch {
+      } catch (err) {
+        console.log(err);
         useAuthStore.getState().clearAuth();
         window.location.href = "/login";
       }
