@@ -21,7 +21,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    console.log("expiry token error", error.response?.data, originalRequest);
+    console.log("expiry token error ....:", error.response?.data);
 
     // If original request already retried, reject
     if (originalRequest._retry) {
