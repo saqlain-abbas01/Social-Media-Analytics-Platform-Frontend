@@ -57,7 +57,7 @@ export function LoginPage() {
     onSuccess: (data) => {
       console.log("registered data", data);
       setAuth(data.user, data.accessToken);
-      toast.success("User registration is sucessfull");
+      toast.success("User logged in sucessfull");
       navigate("/");
     },
     onError: (err: ApiError) => {
